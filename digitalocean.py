@@ -3,10 +3,20 @@ from dotenv import load_dotenv
 from pydo import Client
 import time
 import subprocess
+from cloudflare import Cloudflare
 
 load_dotenv("secret.env")
 client = Client(token=os.getenv("DIGITALOCEAN_TOKEN"))
 ssh_user = 'root'
+
+cf_client = Cloudflare(
+    api_email=os.environ.get("CLOUDFLARE_EMAIL"),
+    api_key=os.environ.get("CLOUDFLARE_API_TOKEN"), 
+)
+zone_id = '298177d402e015062784b88b0314ea6e'
+cf_id = 'c56218dbcc6c69d572703fb60e1ed809'
+CF_ZONE_NAME = "ticklerstavern.bar"
+CF_RECORD_NAME = "mc.ticklerstavern.bar"
 
 def get_balance():
     balance = client.balance.get()
@@ -26,6 +36,7 @@ def create_droplet():
         }
     )
     print("Droplet created successfully.")
+    bind_mc_dns(drop_id())
 
 def drop_id():
     droplet_info = client.droplets.list()
@@ -37,6 +48,39 @@ def drop_ip(drop_id):
     resp = client.droplets.get(drop_id)
     ip = resp['droplet']['networks']['v4'][0]['ip_address']
     return ip
+
+
+def bind_mc_dns(drop_id):
+    droplet_ip = drop_ip(drop_id)
+
+    records = cf_client.dns.records.list(
+        zone_id=zone_id,
+        name=CF_RECORD_NAME,
+        type="A",
+    )
+    record = next(iter(records), None)
+
+    if record is not None:
+        cf_client.dns.records.update(
+            record.id,
+            zone_id=zone_id,
+            name=CF_RECORD_NAME,
+            type="A",
+            content=droplet_ip,
+            ttl=1,
+            proxied=False,
+        )
+    else:
+        cf_client.dns.records.create(
+            zone_id=zone_id,
+            name=CF_RECORD_NAME,
+            type="A",
+            content=droplet_ip,
+            ttl=1,
+            proxied=False,
+        )
+
+    print(f"Bound {CF_RECORD_NAME} to {droplet_ip}.")
 
 
 def destroy_droplet(drop_id):

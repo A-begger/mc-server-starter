@@ -5,6 +5,7 @@ from pydo import Client
 import time
 import subprocess
 from urllib import request, error
+from cloudflare import Cloudflare
 
 load_dotenv("secret.env")
 client = Client(token=os.getenv("DIGITALOCEAN_TOKEN"))
@@ -19,7 +20,7 @@ def _cloudflare_headers():
         raise RuntimeError("Missing cloudflare_api_token in secret.env")
 
     return {
-        "Authorization": f"Bearer {cloudflare_api_token}",
+        "Authorization": f"Bearer {os.getenv('cloudflare_api_token')}",
         "Content-Type": "application/json",
     }
 
@@ -102,7 +103,8 @@ def bind_cloudflare_record(drop_id):
     if not zone_lookup.get("success") or not zone_lookup.get("result"):
         raise RuntimeError(f"Cloudflare zone not found: {zone_name}")
 
-    zone_id = zone_lookup["result"][0]["id"]
+    #zone_id = zone_lookup["result"][0]["id"]
+    zone_id = 'c56218dbcc6c69d572703fb60e1ed809'
     all_records = _cloudflare_request(
         "GET",
         f"https://api.cloudflare.com/client/v4/zones/{zone_id}/dns_records?name={mc_record_name}&per_page=100",
@@ -186,7 +188,7 @@ def shutdown(drop_id, ssh_user):
 def create_droplet_snapshot():
     print("Creating droplet...")
     snapshot = recent_snapshot(list_snapshots())
-    response = client.droplets.create(
+    client.droplets.create(
         body={
             "name": "mc-server",
             "region": "SGP1",
@@ -196,8 +198,7 @@ def create_droplet_snapshot():
             "backups": False,       
         }
     )
-    droplet_id = _extract_droplet_id(response) or drop_id()
-    bind_cloudflare_record(droplet_id)
+    droplet_id = drop_id()
     print("Droplet created from snapshot successfully.")
     return droplet_id
 
@@ -250,4 +251,12 @@ def stop_server():
     prune_snapshots()
     destroy_droplet(droplet_id)
 
+cl_client = Cloudflare(api_token=os.getenv("cloudflare_api_token"))
+def zone_test():
+    zone = cl_client.zones.create(
+        account={"id": "c56218dbcc6c69d572703fb60e1ed809"},
+        name="ticklerstavern.bar",
+        type="full",
+    )
 
+bind_cloudflare_record(drop_id())

@@ -4,3 +4,4 @@ Dependencies:
 - discord.py
 - dotenv
 - pydo
+- cloudflare

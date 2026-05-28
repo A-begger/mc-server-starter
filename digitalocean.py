@@ -17,6 +17,7 @@ zone_id = '298177d402e015062784b88b0314ea6e'
 cf_id = 'c56218dbcc6c69d572703fb60e1ed809'
 CF_ZONE_NAME = "ticklerstavern.bar"
 CF_RECORD_NAME = "mc.ticklerstavern.bar"
+CF_RECORD_NAME_DASHBOARD = "dashboard.ticklerstavern.bar"
 POLL_INTERVAL_SECONDS = 5
 POLL_TIMEOUT_SECONDS = 1800
 
@@ -139,6 +140,37 @@ def bind_mc_dns(drop_id):
 
     print(f"Bound {CF_RECORD_NAME} to {droplet_ip}.")
 
+def bind_dashboard_dns(drop_id):
+    droplet_ip = drop_ip(drop_id)
+
+    records = cf_client.dns.records.list(
+        zone_id=zone_id,
+        name=CF_RECORD_NAME_DASHBOARD,
+        type="A",
+    )
+    record = next(iter(records), None)
+
+    if record is not None:
+        cf_client.dns.records.update(
+            record.id,
+            zone_id=zone_id,
+            name=CF_RECORD_NAME_DASHBOARD,
+            type="A",
+            content=droplet_ip,
+            ttl=1,
+            proxied=True,
+        )
+    else:
+        cf_client.dns.records.create(
+            zone_id=zone_id,
+            name=CF_RECORD_NAME_DASHBOARD,
+            type="A",
+            content=droplet_ip,
+            ttl=1,
+            proxied=True,
+        )
+
+    print(f"Bound {CF_RECORD_NAME_DASHBOARD} to {droplet_ip}.")
 
 def destroy_droplet(drop_id):
     print("Destroying droplet...")
@@ -235,6 +267,7 @@ def prune_snapshots():
 
 def start():
     create_droplet_snapshot()
+    bind_dashboard_dns(drop_id())
     bind_mc_dns(drop_id())
     #run startup script here
 def stop():

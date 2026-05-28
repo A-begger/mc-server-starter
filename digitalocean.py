@@ -17,6 +17,63 @@ zone_id = '298177d402e015062784b88b0314ea6e'
 cf_id = 'c56218dbcc6c69d572703fb60e1ed809'
 CF_ZONE_NAME = "ticklerstavern.bar"
 CF_RECORD_NAME = "mc.ticklerstavern.bar"
+POLL_INTERVAL_SECONDS = 5
+POLL_TIMEOUT_SECONDS = 1800
+
+
+def _unwrap(mapping, key):
+    if isinstance(mapping, dict) and key in mapping:
+        return mapping[key]
+    return mapping
+
+
+def _wait_for_action(drop_id, action_id, description):
+    deadline = time.time() + POLL_TIMEOUT_SECONDS
+
+    while True:
+        action = _unwrap(client.droplet_actions.get(drop_id, action_id), "action")
+        status = action.get("status")
+
+        if status == "completed":
+            return action
+
+        if status == "errored":
+            raise RuntimeError(f"{description} failed: {action}")
+
+        if time.time() >= deadline:
+            raise TimeoutError(f"Timed out waiting for {description} to finish")
+
+        time.sleep(POLL_INTERVAL_SECONDS)
+
+
+def _wait_for_droplet_status(drop_id, expected_status, description):
+    deadline = time.time() + POLL_TIMEOUT_SECONDS
+
+    while True:
+        droplet = _unwrap(client.droplets.get(drop_id), "droplet")
+        status = droplet.get("status")
+
+        if status == expected_status:
+            return droplet
+
+        if time.time() >= deadline:
+            raise TimeoutError(f"Timed out waiting for {description} to finish")
+
+        time.sleep(POLL_INTERVAL_SECONDS)
+
+
+def _wait_for_droplet_deletion(drop_id, description):
+    deadline = time.time() + POLL_TIMEOUT_SECONDS
+
+    while True:
+        droplets = _unwrap(client.droplets.list(), "droplets")
+        if not any(droplet.get("id") == drop_id for droplet in droplets):
+            return
+
+        if time.time() >= deadline:
+            raise TimeoutError(f"Timed out waiting for {description} to finish")
+
+        time.sleep(POLL_INTERVAL_SECONDS)
 
 def get_balance():
     balance = client.balance.get()
@@ -36,7 +93,7 @@ def create_droplet():
         }
     )
     print("Droplet created successfully.")
-    bind_mc_dns(drop_id())
+    #bind_mc_dns(drop_id())
 
 def drop_id():
     droplet_info = client.droplets.list()
@@ -86,6 +143,8 @@ def bind_mc_dns(drop_id):
 def destroy_droplet(drop_id):
     print("Destroying droplet...")
     client.droplets.destroy(drop_id)
+    _wait_for_droplet_deletion(drop_id, "droplet destruction")
+    print("Droplet destroyed successfully.")
 
 
 def create_snapshot(drop_id):
@@ -96,6 +155,9 @@ def create_snapshot(drop_id):
         "name": snapshot_name
     }
     response = client.droplet_actions.post(droplet_id=drop_id, body=request_body)
+    action = _unwrap(response, "action")
+    _wait_for_action(drop_id, action["id"], "snapshot creation")
+    print("Snapshot created successfully.")
 
 def list_snapshots():
     snapshots = client.snapshots.list()
@@ -118,11 +180,13 @@ def shutdown(drop_id, ssh_user):
         'poweroff',
     ], check=True)
     print("Droplet shutdown initiated.")
+    _wait_for_droplet_status(drop_id, "off", "droplet shutdown")
+    print("Droplet shutdown completed.")
 
 def create_droplet_snapshot():
     print("Creating droplet...")
     snapshot = recent_snapshot(list_snapshots())
-    client.droplets.create(
+    response = client.droplets.create(
         body={
             "name": "mc-server",
             "region": "SGP1",
@@ -132,6 +196,8 @@ def create_droplet_snapshot():
             "backups": False,       
         }
     )
+    droplet = _unwrap(response, "droplet")
+    _wait_for_droplet_status(droplet["id"], "active", "droplet creation")
     print("Droplet created from snapshot successfully.")
 
 def recent_snapshot(list_snapshots):
@@ -166,3 +232,15 @@ def prune_snapshots():
     ids_to_delete = prune_list(snapshots)
     for id in ids_to_delete:
         client.snapshots.delete(id)
+
+def start():
+    create_droplet_snapshot()
+    bind_mc_dns(drop_id())
+    #run startup script here
+def stop():
+    #run exit script here
+    drop_id()
+    shutdown(drop_id(), ssh_user)
+    create_snapshot(drop_id())
+    destroy_droplet(drop_id())
+    prune_snapshots()

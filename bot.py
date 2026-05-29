@@ -34,17 +34,6 @@ async def balance(ctx):
     bal = do.get_balance()
     await ctx.send(f"Your DigitalOcean balance is: ${bal}")
 
-@bot.command()
-async def create(ctx):
-    do.create_droplet()
-    await ctx.send("Droplet created successfully!")
-
-@bot.command()
-async def destroy(ctx):
-    drop_id = do.drop_id()
-    do.destroy_droplet(drop_id)
-    await ctx.send("Droplet destroyed successfully!")
-
 @bot.tree.command(name="balance", description="Get your DigitalOcean balance")
 async def balance_slash(interaction: discord.Interaction):
     bal = do.get_balance()

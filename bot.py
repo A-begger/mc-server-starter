@@ -29,10 +29,6 @@ async def on_ready():
 async def ping_slash(interaction: discord.Interaction):
 	await interaction.response.send_message(f"Pong! `{round(bot.latency * 1000)}ms`")
 
-@bot.command()
-async def ping(ctx):
-    await ctx.send(f"Pong! `{round(bot.latency * 1000)}ms`")
-
 @bot.command() #testing my knowledge
 async def balance(ctx):
     bal = do.get_balance()

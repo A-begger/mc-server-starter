@@ -43,7 +43,6 @@ async def balance_slash(interaction: discord.Interaction):
 async def start(ctx):
     await ctx.send("Starting server...")
     do.start()
-    ip = do.drop_ip()
     await ctx.send(f"Server started successfully!")
 
 @bot.command()
@@ -54,7 +53,8 @@ async def stop(ctx):
 
 @bot.command()
 async def ip(ctx):
-    ip = do.drop_ip()
+    drop_id = do.drop_id()
+    ip = do.drop_ip(drop_id)
     await ctx.send(f"The server IP is: {ip}")
 
 bot.run(TOKEN)

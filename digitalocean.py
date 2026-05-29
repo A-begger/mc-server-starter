@@ -208,6 +208,8 @@ def shutdown(drop_id, ssh_user):
 
     subprocess.run([
         'ssh',
+        '-o', 'StrictHostKeyChecking=no',
+        '-o', 'UserKnownHostsFile=/dev/null',
         f'{ssh_user}@{droplet_ip}',
         'poweroff',
     ], check=True)

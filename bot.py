@@ -50,7 +50,17 @@ async def balance_slash(interaction: discord.Interaction):
     bal = do.get_balance()
     await interaction.response.send_message(f"Your DigitalOcean balance is: ${bal}")
 
+@bot.command()
+async def start(ctx):
+    await ctx.send("Starting server...")
+    do.start()
+    await ctx.send(f"Server started successfully! On {do.drop_ip()}")
 
+@bot.command()
+async def stop(ctx):
+    await ctx.send("Stopping server...")
+    do.stop()
+    await ctx.send("Server stopped successfully!")
 
 bot.run(TOKEN)
 

@@ -89,7 +89,7 @@ def create_droplet():
             "region": "SGP1",
             "size": "s-4vcpu-8gb",
             "image": "ubuntu-24-04-x64",
-            "ssh_keys": [os.getenv("ssh_fingerprint")],
+            "ssh_keys": [os.getenv("ssh_fingerprint"), os.getenv("ssh_fingerprint_repl")],
             "backups": False,       
         }
     )

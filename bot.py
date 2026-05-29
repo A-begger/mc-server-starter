@@ -25,9 +25,13 @@ bot = MyBot(command_prefix="!", intents=intents)
 async def on_ready():
 	print(f"Logged in as {bot.user} (ID: {bot.user.id})")
 
-@bot.tree.command(name="ping", description="Check the bot latency", guild=discord.Object(id=480418557767843840))
+@bot.tree.command(name="ping", description="Check the bot latency")
 async def ping_slash(interaction: discord.Interaction):
 	await interaction.response.send_message(f"Pong! `{round(bot.latency * 1000)}ms`")
+
+@bot.command()
+async def ping(ctx):
+    await ctx.send(f"Pong! `{round(bot.latency * 1000)}ms`")
 
 @bot.command() #testing my knowledge
 async def balance(ctx):
@@ -45,17 +49,35 @@ async def start(ctx):
     do.start()
     await ctx.send(f"Server started successfully!")
 
+@bot.tree.command(name="start", description="Start the server")
+async def start_slash(interaction: discord.Interaction):
+    await interaction.response.send_message("Starting server...")
+    do.start()
+    await interaction.response.send_message(f"Server started successfully!")
+
 @bot.command()
 async def stop(ctx):
     await ctx.send("Stopping server...")
     do.stop()
     await ctx.send("Server stopped successfully!")
 
+@bot.tree.command(name="stop", description="Stop the server")
+async def stop_slash(interaction: discord.Interaction):
+    await interaction.response.send_message("Stopping server...")
+    do.stop()
+    await interaction.response.send_message("Server stopped successfully!")
+
 @bot.command()
 async def ip(ctx):
     drop_id = do.drop_id()
     ip = do.drop_ip(drop_id)
     await ctx.send(f"The server IP is: {ip}")
+
+@bot.tree.command(name="ip", description="Get the server IP address")
+async def ip_slash(interaction: discord.Interaction):
+    drop_id = do.drop_id()
+    ip = do.drop_ip(drop_id)
+    await interaction.response.send_message(f"The server IP is: {ip}")
 
 bot.run(TOKEN)
 

@@ -44,13 +44,18 @@ async def start(ctx):
     await ctx.send("Starting server...")
     do.start()
     ip = do.drop_ip()
-    await ctx.send(f"Server started successfully! On {ip}")
+    await ctx.send(f"Server started successfully!")
 
 @bot.command()
 async def stop(ctx):
     await ctx.send("Stopping server...")
     do.stop()
     await ctx.send("Server stopped successfully!")
+
+@bot.command()
+async def ip(ctx):
+    ip = do.drop_ip()
+    await ctx.send(f"The server IP is: {ip}")
 
 bot.run(TOKEN)
 

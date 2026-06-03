@@ -4,6 +4,7 @@ import subprocess
 import requests
 from dotenv import load_dotenv
 from cloudflare import Cloudflare
+import paramiko
 
 load_dotenv("secret.env")
 
@@ -114,7 +115,7 @@ def create_instance():
     print("Creating instance...")
     payload = {
         "region": "sgp",
-        "plan": "vx1-g-2c-8g-120s", # Verify this plan ID with Vultr
+        "plan": "vhf-3c-8gb", # Verify this plan ID with Vultr
         "os_id": 2284,        # Vultr's ID for Ubuntu 24.04 x64
         "label": "mc-server",
         "sshkey_id": VULTR_SSH_KEYS,
@@ -251,6 +252,37 @@ def shutdown(instance_id, ssh_user):
     _wait_for_instance_status(instance_id, "active", "stopped", "instance shutdown")
     print("Instance shutdown completed.")
 
+def get_instance_password(instance_id):
+    data = vultr_get(f"instances/{instance_id}")
+    return data["instance"]["default_password"]
+
+def p_shutdown(instance_id, ssh_user):
+    instance_ip = get_instance_ip(instance_id)
+    instance_password = get_instance_password(instance_id)
+
+    # Initialize the SSH client
+    ssh = paramiko.SSHClient()
+    # Automatically add the server's host key (equivalent to StrictHostKeyChecking=no)
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+    try:
+        print(f"Connecting to {instance_ip} via SSH...")
+        # Connect using the dynamically fetched password
+        ssh.connect(instance_ip, username=ssh_user, password=instance_password)
+        
+        print("Sending poweroff command...")
+        # Execute the shutdown command
+        stdin, stdout, stderr = ssh.exec_command('poweroff')
+        
+    except Exception as e:
+        print(f"SSH connection failed: {e}")
+    finally:
+        ssh.close()
+
+    print("Instance shutdown initiated. Waiting for Vultr API...")
+    _wait_for_instance_status(instance_id, "active", "stopped", "instance shutdown")
+    print("Instance shutdown completed.")
+
 # --- Main Workflows ---
 
 def start():
@@ -263,7 +295,8 @@ def start():
 def stop():
     # run exit script here
     inst_id = get_instance_id()
-    shutdown(inst_id, ssh_user)
+    p_shutdown(inst_id, ssh_user)
     create_snapshot(inst_id)
     destroy_instance(inst_id)
     prune_snapshots()
+stop()

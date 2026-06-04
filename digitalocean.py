@@ -20,7 +20,9 @@ CF_RECORD_NAME = "mc.ticklerstavern.bar"
 CF_RECORD_NAME_DASHBOARD = "dashboard.ticklerstavern.bar"
 POLL_INTERVAL_SECONDS = 5
 POLL_TIMEOUT_SECONDS = 1800
-
+intel_prem = "s-2vcpu-8gb-160gb-intel"
+shared_cpu = "s-4vcpu-8gb"
+slug = shared_cpu
 
 def _unwrap(mapping, key):
     if isinstance(mapping, dict) and key in mapping:
@@ -87,7 +89,7 @@ def create_droplet():
         body={
             "name": "mc-server",
             "region": "SGP1",
-            "size": "s-4vcpu-8gb",
+            "size": slug,
             "image": "ubuntu-24-04-x64",
             "ssh_keys": [os.getenv("ssh_fingerprint"), os.getenv("ssh_fingerprint_repl")],
             "backups": False,       
@@ -224,7 +226,7 @@ def create_droplet_snapshot():
         body={
             "name": "mc-server",
             "region": "SGP1",
-            "size": "s-4vcpu-8gb",
+            "size": slug,
             "image": snapshot,
             "ssh_keys": [os.getenv("ssh_fingerprint"), os.getenv("ssh_fingerprint_repl")],
             "backups": False,       
